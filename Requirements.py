@@ -3,6 +3,12 @@ import os
 # Install wget
 os.system('apt install wget -y > /dev/null 2>&1')
 
+# Install playwright
+subprocess.run(["pip", "install", "playwright"])
+
+# Install playwright dependencies
+subprocess.run(["playwright", "install"])
+
 # Install webdriver_manager
 os.system('pip install webdriver_manager > /dev/null 2>&1')
 
