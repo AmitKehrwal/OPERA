@@ -3,12 +3,6 @@ import os
 # Install wget
 os.system('apt install wget -y > /dev/null 2>&1')
 
-# Install playwright
-subprocess.run(["pip", "install", "playwright"])
-
-# Install playwright dependencies
-subprocess.run(["playwright", "install"])
-
 # Install webdriver_manager
 os.system('pip install webdriver_manager > /dev/null 2>&1')
 
@@ -31,4 +25,4 @@ os.system('apt install -y opera-stable > /dev/null 2>&1')
 os.system('pip install selenium==4.2.0 > /dev/null 2>&1')
 
 # Install faker
-os.system('pip install indian_names > /dev/null 2>&1')
+os.system('pip install faker > /dev/null 2>&1')
