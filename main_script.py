@@ -73,7 +73,9 @@ async def start(name, user, passcode, wait_time):
         mic_button_locator.click()
         print(f"{name} mic aayenge.")
     except Exception as e:
+        # You can print the exception for debugging purposes
         print(f"{name} mic nahe aayenge. ", e)
+
 
     sync_print(f"{name} sleep for {wait_time} seconds ...")
     while wait_time > 0:
