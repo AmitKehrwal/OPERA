@@ -2,19 +2,19 @@ import time
 import threading
 import asyncio
 import warnings
-import indian_names
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.opera import OperaDriverManager
+import indian_names
 
 warnings.filterwarnings('ignore')
 MUTEX = threading.Lock()
 executable_path = OperaDriverManager().install()
 print(executable_path)
 
-running = True  # Added a global variable to control the main loop
+running = True
 
 
 def sync_print(text):
@@ -41,55 +41,38 @@ def driver_wait(driver, locator, by, secs=10, condition=ec.element_to_be_clickab
     return element
 
 
-def start(name, user, wait_time, meetingcode, passcode):
-    print(f"{name} started!")
-
-    driver = get_driver()  # Create a new driver instance for each thread
+async def start(name, wait_time):
+    user = indian_names.get_full_name()
+    sync_print(f"{name} started!")
+    driver = get_driver()
     driver.get(f'https://zoom.us/wc/join/{meetingcode}')
+    time.sleep(10)
+
+    inp = driver.find_element(By.XPATH, '//input[@type="text"]')
+    time.sleep(1)
+    inp.send_keys(f"{user}")
+    time.sleep(5)
+
+    inp2 = driver.find_element(By.XPATH, '//input[@type="password"]')
+    time.sleep(2)
+    inp2.send_keys(passcode)
+
+    join_button = driver.find_element(By.XPATH, '//button[contains(@class,"preview-join-button")]')
+    driver.execute_script("arguments[0].click();", join_button)
 
     try:
-        query = '//button[@id="onetrust-accept-btn-handler"]'
-        accept_button = driver_wait(driver, query, By.XPATH, secs=5000)
-        accept_button.click()
-    except Exception as e:
-        pass
-
-    try:
-        query = '//button[@id="wc_agree1"]'
-        agree_button = driver_wait(driver, query, By.XPATH, secs=5000)
-        agree_button.click()
-    except Exception as e:
-        pass
-
-    try:
-        query = 'input[type="text"]'
-        username_input = driver_wait(driver, query, By.CSS_SELECTOR, secs=200000)
-        username_input.send_keys(user)
-
-        query = 'input[type="password"]'
-        password_input = driver_wait(driver, query, By.CSS_SELECTOR, secs=200000)
-        password_input.send_keys(passcode)
-
-        query = 'button.preview-join-button'
-        join_button = driver_wait(driver, query, By.CSS_SELECTOR, secs=200000)
-        join_button.click()
-    except Exception as e:
-        pass
-
-    try:
-        query = '//button[text()="Join Audio by Computer"]'
-        mic_button_locator = driver_wait(driver, query, By.XPATH, secs=35000)
-        mic_button_locator.click()
+        # Use JavaScript to click "Join Audio by Computer"
+        driver.execute_script('document.evaluate(\'//button[text()="Join Audio by Computer"]\', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.click();')
         print(f"{name} mic aayenge.")
     except Exception as e:
         print(f"{name} mic nahe aayenge. ", e)
 
-    print(f"{name} sleep for {wait_time} seconds ...")
-    while running and wait_time > 0:
-        time.sleep(1)
+    sync_print(f"{name} sleep for {wait_time} seconds ...")
+    while wait_time > 0:
+        await asyncio.sleep(1)
         wait_time -= 1
-    print(f"{name} ended!")
-    driver.quit()  # Quit the driver after the thread has completed
+    sync_print(f"{name} ended!")
+    driver.quit()
 
 
 def main():
@@ -106,7 +89,14 @@ def main():
             user = indian_names.get_full_name()
         except IndexError:
             break
-        start(f'[Thread{i}]', user, wait_time, meetingcode, passcode)
+        wk = threading.Thread(target=asyncio.run, args=(start(f'[Thread{i}]', wait_time),))
+        workers.append(wk)
+
+    for wk in workers:
+        wk.start()
+
+    for wk in workers:
+        wk.join()
 
 
 if __name__ == '__main__':
@@ -114,7 +104,8 @@ if __name__ == '__main__':
     meetingcode = input("Enter meeting code (No Space): ")
     passcode = input("Enter Password (No Space): ")
     sec = 60
+
     try:
         main()
     except:
-        running = False  # Stop the main loop if an exception occurs
+        running = False
