@@ -1,35 +1,24 @@
 import time
-import threading
+import concurrent.futures
 import asyncio
-import warnings
-
-# Remove the import statement for Faker
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.opera.options import Options
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.opera import OperaDriverManager
 
-# Replace the Faker instance with the indian_names library
 import indian_names
 
-warnings.filterwarnings('ignore')
-MUTEX = threading.Lock()
+number = int(input("Enter number of Users: "))
+meetingcode = input("Enter meeting code (No Space): ")
+passcode = input("Enter Password (No Space): ")
+sec = 60
+
 executable_path = OperaDriverManager().install()
-print(executable_path)
 
 
 def sync_print(text):
-    with MUTEX:
-        print(text)
-
-
-def getMIC(driver):
-    print("Accessing Mic")
-    pass
+    print(text)
 
 
 def get_driver():
@@ -45,77 +34,61 @@ def get_driver():
     return driver
 
 
-def driver_wait(driver, locator, by, secs=10, condition=ec.element_to_be_clickable):
+def driver_wait(driver, locator, by, secs=10, condition=EC.element_to_be_clickable):
     wait = WebDriverWait(driver=driver, timeout=secs)
     element = wait.until(condition((by, locator)))
     return element
 
 
 async def start(name, wait_time):
-    # Replace the usage of Faker with indian_names
     user = indian_names.get_full_name()
     sync_print(f"{name} started!")
-    driver = get_driver()  # Create a new driver instance for each thread
-    driver.get(f'https://zoom.us/wc/join/{meetingcode}')
-    time.sleep(10)
-    inp = driver.find_element(By.XPATH, '//input[@type="text"]')
-    time.sleep(1)
-    inp.send_keys(f"{user}")
-    time.sleep(5)
-
-    inp2 = driver.find_element(By.XPATH, '//input[@type="password"]')
-    time.sleep(2)
-    inp2.send_keys(passcode)
-
-    # Click the "Join" button using JavaScript
-    join_button = driver.find_element(By.XPATH, '//button[contains(@class,"preview-join-button")]')
-    driver.execute_script("arguments[0].click();", join_button)
+    driver = get_driver()
 
     try:
+        driver.get(f'https://zoom.us/wc/join/{meetingcode}')
+        time.sleep(10)
+
+        inp = driver.find_element(By.XPATH, '//input[@type="text"]')
+        inp.send_keys(f"{user}")
+        time.sleep(5)
+
+        inp2 = driver.find_element(By.XPATH, '//input[@type="password"]')
+        inp2.send_keys(passcode)
+
+        join_button = driver.find_element(By.XPATH, '//button[contains(@class,"preview-join-button")]')
+        driver.execute_script("arguments[0].click();", join_button)
+
         query = '//button[text()="Join Audio by Computer"]'
-        mic_button_locator = driver_wait(driver, query, By.XPATH, secs=35000)
+        mic_button_locator = driver_wait(driver, query, By.XPATH, secs=60)
         mic_button_locator.click()
-        print(f"{name} mic aayenge.")
+        sync_print(f"{name} mic aayenge.")
+
+        sync_print(f"{name} sleep for {wait_time} seconds ...")
+        while wait_time > 0:
+            await asyncio.sleep(1)
+            wait_time -= 1
+        sync_print(f"{name} ended!")
+
     except Exception as e:
-        # You can print the exception for debugging purposes
-        print(f"{name} mic nahe aayenge. ", e)
+        sync_print(f"{name} failed: {e}")
 
-    sync_print(f"{name} sleep for {wait_time} seconds ...")
-    while wait_time > 0:
-        await asyncio.sleep(1)
-        wait_time -= 1
-    sync_print(f"{name} ended!")
-    driver.quit()  # Quit the driver after the thread has completed
+    finally:
+        driver.quit()
 
 
-def main():
+async def main():
     wait_time = sec * 90
     workers = []
 
-    for i in range(number):
-        try:
-            proxy = proxylist[i]
-        except Exception:
-            proxy = None
-        try:
-            # Replace the usage of Faker with indian_names
-            user = indian_names.get_full_name()
-        except IndexError:
-            break
-        wk = threading.Thread(target=asyncio.run, args=(start(f'[Thread{i}]', wait_time),))
-        workers.append(wk)
-    for wk in workers:
-        wk.start()
-    for wk in workers:
-        wk.join()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=number) as executor:
+        loop = asyncio.get_running_loop()
+        tasks = [loop.run_in_executor(executor, start, f'[Thread{i}]', wait_time) for i in range(number)]
+        await asyncio.gather(*tasks)
 
 
 if __name__ == '__main__':
-    number = int(input("Enter number of Users: "))
-    meetingcode = input("Enter meeting code (No Space): ")
-    passcode = input("Enter Password (No Space): ")
-    sec = 60
     try:
-        main()
-    except:
+        asyncio.run(main())
+    except KeyboardInterrupt:
         pass
