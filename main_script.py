@@ -3,7 +3,7 @@ import threading
 import asyncio
 import warnings
 
-from faker import Faker
+# Remove the import statement for Faker
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
@@ -13,8 +13,10 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.firefox.service import Service
 from webdriver_manager.opera import OperaDriverManager
 
+# Replace the Faker instance with the indian_names library
+import indian_names
+
 warnings.filterwarnings('ignore')
-fake = Faker('en_IN')
 MUTEX = threading.Lock()
 executable_path = OperaDriverManager().install()
 print(executable_path)
@@ -49,7 +51,9 @@ def driver_wait(driver, locator, by, secs=10, condition=ec.element_to_be_clickab
     return element
 
 
-async def start(name, user, passcode, wait_time):
+async def start(name, wait_time):
+    # Replace the usage of Faker with indian_names
+    user = indian_names.get_full_name()
     sync_print(f"{name} started!")
     driver = get_driver()  # Create a new driver instance for each thread
     driver.get(f'https://zoom.us/wc/join/{meetingcode}')
@@ -94,10 +98,11 @@ def main():
         except Exception:
             proxy = None
         try:
-            user = fake.name()
+            # Replace the usage of Faker with indian_names
+            user = indian_names.get_full_name()
         except IndexError:
             break
-        wk = threading.Thread(target=asyncio.run, args=(start(f'[Thread{i}]', user, passcode, wait_time),))
+        wk = threading.Thread(target=asyncio.run, args=(start(f'[Thread{i}]', wait_time),))
         workers.append(wk)
     for wk in workers:
         wk.start()
