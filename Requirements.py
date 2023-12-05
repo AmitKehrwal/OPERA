@@ -25,4 +25,4 @@ os.system('apt install -y opera-stable > /dev/null 2>&1')
 os.system('pip install selenium==4.2.0 > /dev/null 2>&1')
 
 # Install faker
-os.system('pip install faker > /dev/null 2>&1')
+os.system('pip install indian_names > /dev/null 2>&1')
