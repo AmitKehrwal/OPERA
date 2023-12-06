@@ -6,6 +6,7 @@ import warnings
 # Remove the import statement for Faker
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.opera.options import Options
@@ -74,7 +75,8 @@ async def start(name, wait_time):
     try:
         query = '//button[text()="Join Audio by Computer"]'
         mic_button_locator = driver_wait(driver, query, By.XPATH, secs=35000)
-        driver.execute_script("arguments[0].click();", mic_button_locator)
+        action = ActionChains(driver)
+        action.move_to_element(mic_button_locator).click().perform()
         print(f"{name} mic aayenge.")
     except Exception as e:
         # You can print the exception for debugging purposes
