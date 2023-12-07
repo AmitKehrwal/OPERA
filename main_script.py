@@ -74,13 +74,13 @@ async def start(name, wait_time):
 
     try:
         query = '//button[text()="Join Audio by Computer"]'
-        mic_button_locator = driver_wait(driver, query, By.XPATH, secs=35000)
-        action = ActionChains(driver)
-        action.move_to_element(mic_button_locator).click().perform()
+        mic_button_locator = driver_wait(driver, query, By.XPATH, secs=30)
+        driver.execute_script("arguments[0].scrollIntoView();", mic_button_locator)
+        driver.execute_script("arguments[0].click();", mic_button_locator)
         print(f"{name} mic aayenge.")
     except Exception as e:
-        # You can print the exception for debugging purposes
         print(f"{name} mic nahe aayenge. ", e)
+)
 
 
     sync_print(f"{name} sleep for {wait_time} seconds ...")
