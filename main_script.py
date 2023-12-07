@@ -74,7 +74,7 @@ async def start(name, wait_time):
 
     try:
         query = '//button[text()="Join Audio by Computer"]'
-        mic_button_locator = driver_wait(driver, query, By.XPATH, secs=30)
+        mic_button_locator = driver_wait(driver, query, By.XPATH, secs=60)
         driver.execute_script("arguments[0].scrollIntoView();", mic_button_locator)
         driver.execute_script("arguments[0].click();", mic_button_locator)
         print(f"{name} mic aayenge.")
