@@ -80,7 +80,6 @@ async def start(name, wait_time):
         print(f"{name} mic aayenge.")
     except Exception as e:
         print(f"{name} mic nahe aayenge. ", e)
-)
 
 
     sync_print(f"{name} sleep for {wait_time} seconds ...")
