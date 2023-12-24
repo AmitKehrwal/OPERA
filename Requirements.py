@@ -1,49 +1,88 @@
-import os
+import threading
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from faker import Faker
+from playwright.async_api import async_playwright
+import nest_asyncio
 
-# Install wget
-os.system('apt install wget -y > /dev/null 2>&1')
+nest_asyncio.apply()
 
-# Install webdriver_manager
-os.system('pip install webdriver_manager > /dev/null 2>&1')
+fake = Faker('en_IN')
+MUTEX = threading.Lock()
 
-# Upgrade webdriver_manager
-os.system('pip install --upgrade webdriver_manager > /dev/null 2>&1')
+def sync_print(text):
+    with MUTEX:
+        print(text)
 
-# Add Opera repository key
-os.system('wget -qO- https://deb.opera.com/archive.key | apt-key add - > /dev/null 2>&1')
+async def start(name, wait_time, meetingcode, passcode):
+    user = fake.name()
+    sync_print(f"{name} started! User: {user}")
 
-# Set DEBIAN_FRONTEND to non-interactive mode
-os.environ['DEBIAN_FRONTEND'] = 'noninteractive'
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=[
+                '--use-fake-device-for-media-stream',
+                '--use-fake-ui-for-media-stream',
+            ]
+        )
+        context = await browser.new_context(permissions=['microphone'])
+        page = await context.new_page()
 
-import subprocess
+        await page.goto(f'https://zoom.us/wc/join/{meetingcode}', timeout=200000)
 
-# Install wget
-subprocess.run(["apt", "install", "wget", "-y"])
+        try:
+            await page.click('//button[@id="onetrust-accept-btn-handler"]', timeout=5000)
+        except:
+            pass
+        try:
+            await page.click('//button[@id="wc_agree1"]', timeout=50000)
+        except:
+            pass
 
-# Install webdriver_manager
-subprocess.run(["pip", "install", "webdriver_manager"])
+        await page.wait_for_selector('input[type="text"]', timeout=200000)
+        await page.fill('input[type="text"]', user)
+        await page.fill('input[type="password"]', passcode)
+        join_button = await page.wait_for_selector('button.preview-join-button')
+        await join_button.click()
 
-# Upgrade webdriver_manager
-subprocess.run(["pip", "install", "--upgrade", "webdriver_manager"])
+        try:
+            # Increase timeout if still mic missing on some users
+            query = '//button[text()="Join Audio by Computer"]'
+            mic_button_locator = await page.wait_for_selector(query, timeout=200000)
+            await mic_button_locator.wait_for_element_state('stable', timeout=200000)
+            await mic_button_locator.evaluate_handle('node => node.click()')
+            sync_print(f"{name} mic aayenge.")
+        except Exception as e:
+            print(e)
+            sync_print(f"{name} mic nhi aayenge.")
 
-# Install curl
-subprocess.run(["apt", "install", "curl", "-y"])
+        # ... (remaining code)
 
-# Download Brave keyring
-subprocess.run(["curl", "-fsSLo", "/usr/share/keyrings/brave-browser-archive-keyring.gpg", "https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg"])
+        # Wait for 30 seconds
+        await asyncio.sleep(30)
 
-# Add Brave repository
-subprocess.run(["echo", "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg] https://brave-browser-apt-release.s3.brave.com/ stable main", "|", "sudo", "tee", "/etc/apt/sources.list.d/brave-browser-release.list"])
+        sync_print(f"{name} sleep for {wait_time} seconds ...")
+        await asyncio.sleep(wait_time)
+        sync_print(f"{name} ended!")
 
-# Update package list
-subprocess.run(["apt-get", "update"])
+        await browser.close()
 
-# Install Brave browser
-subprocess.run(["apt", "install", "brave-browser"])
+async def main():
+    number = 5
+    meetingcode = "83447163005"  # Replace with your desired meeting code
+    passcode = "112233"  # Replace with your desired passcode
 
+    sec = 60
+    wait_time = sec * 60
 
-# Install selenium version 4.2.0
-os.system('pip install selenium==4.2.0 > /dev/null 2>&1')
+    with ThreadPoolExecutor(max_workers=number) as executor:
+        loop = asyncio.get_event_loop()
+        tasks = []
+        for i in range(number):
+            task = loop.create_task(start(f'[Thread{i}]', wait_time, meetingcode, passcode))
+            tasks.append(task)
+        await asyncio.gather(*tasks)
 
-# Install faker
-os.system('pip install indian_names > /dev/null 2>&1')
+if __name__ == '__main__':
+    asyncio.run(main())
